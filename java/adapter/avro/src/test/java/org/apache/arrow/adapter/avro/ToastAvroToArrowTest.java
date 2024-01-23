@@ -33,7 +33,9 @@ public class ToastAvroToArrowTest {
     @Before
     public void init() {
         BufferAllocator allocator = new RootAllocator(Long.MAX_VALUE);
-        config = new AvroToArrowConfigBuilder(allocator).build();
+        config = new AvroToArrowConfigBuilder(allocator)
+                .setTargetBatchSize(10_000)
+                .build();
     }
 
     static final String schemaName = "toast/test_deep_nesting.avsc";
@@ -52,7 +54,7 @@ public class ToastAvroToArrowTest {
         Schema nestedRecord4Schema = nestedRecordExampleSchema.getField("NestedRecord4").schema();
         Schema nestedRecord5Schema = nestedRecord4Schema.getField("NestedRecords").schema().getElementType();
         ArrayList<GenericRecord> data = new ArrayList<>();
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < 10000; i++) {
             // Create sample data
             GenericRecord nestedRecordExample = new GenericData.Record(nestedRecordExampleSchema);
             nestedRecordExample.put("id", 1);
@@ -85,24 +87,20 @@ public class ToastAvroToArrowTest {
     public void nestedSchemaAvroToArrowTest() throws Exception {
 
         File dataFile = TMP.newFile();
-        List<GenericRecord> data = generateData();
         Schema schema = getSchema(schemaName);
 
         BinaryEncoder encoder
                 = new EncoderFactory().directBinaryEncoder(newOutputStream(dataFile.toPath()), null);
         DatumWriter<GenericRecord> writer = new GenericDatumWriter<>(schema);
-        BinaryDecoder decoder = new DecoderFactory().directBinaryDecoder(newInputStream(dataFile.toPath()), null);
-        for (GenericRecord datum : data) {
+        BinaryDecoder decoder = new DecoderFactory().binaryDecoder(newInputStream(dataFile.toPath()), null);
+        for (GenericRecord datum : generateData()) {
             writer.write(datum, encoder);
         }
 
-        try (BufferAllocator allocator = new RootAllocator()) {
-            AvroToArrowConfig config = new AvroToArrowConfigBuilder(allocator).build();
-            try (AvroToArrowVectorIterator avroToArrowVectorIterator = avroToArrowIterator(schema, decoder, config)) {
-                while(avroToArrowVectorIterator.hasNext()) {
-                    try (VectorSchemaRoot root = avroToArrowVectorIterator.next()) {
-                        System.out.print(root.contentToTSVString());
-                    }
+        try (AvroToArrowVectorIterator avroToArrowVectorIterator = avroToArrowIterator(schema, decoder, config)) {
+            while(avroToArrowVectorIterator.hasNext()) {
+                try (VectorSchemaRoot root = avroToArrowVectorIterator.next()) {
+                    System.out.print(root.contentToTSVString());
                 }
             }
         }
