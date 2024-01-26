@@ -169,7 +169,7 @@ public class AvroToArrowIteratorTest extends AvroTestBase {
 
   @Test
   public void testNestedUnion() throws Exception {
-    Schema schema = getSchema("test_array_of_records.avsc");
+    Schema schema = getSchema("test_nested_union.avsc");
     Schema topChildSchema = schema
             .getField("f0")
             .schema();
