@@ -17,6 +17,7 @@
 
 package org.apache.arrow.adapter.avro;
 
+import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 
 import java.io.EOFException;
@@ -164,6 +165,27 @@ public class AvroToArrowIteratorTest extends AvroTestBase {
     }
     checkArrayResult(data, vectors);
     AutoCloseables.close(roots);
+  }
+
+  @Test
+  public void testNestedUnion() throws Exception {
+    Schema schema = getSchema("test_array_of_records.avsc");
+    Schema topChildSchema = schema
+            .getField("f0")
+            .schema();
+    GenericRecord parent = new GenericData.Record(schema);
+    GenericRecord topChild = new GenericData.Record(topChildSchema);
+
+    topChild.put("fNestedUnion", 1);
+    parent.put("f0", topChild);
+
+    List<VectorSchemaRoot> roots = new ArrayList<>();
+    try (AvroToArrowVectorIterator iterator = convert(schema, singletonList(parent))) {
+      while (iterator.hasNext()) {
+        roots.add(iterator.next());
+        System.out.println(roots.get(roots.size() - 1).contentToTSVString());
+      }
+    }
   }
 
   @Test
