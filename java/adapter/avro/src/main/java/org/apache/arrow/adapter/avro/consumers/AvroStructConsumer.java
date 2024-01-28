@@ -21,7 +21,10 @@ import java.io.IOException;
 
 import org.apache.arrow.util.AutoCloseables;
 import org.apache.arrow.vector.FieldVector;
+import org.apache.arrow.vector.complex.AbstractContainerVector;
+import org.apache.arrow.vector.complex.RepeatedValueVector;
 import org.apache.arrow.vector.complex.StructVector;
+import org.apache.arrow.vector.types.Types;
 import org.apache.avro.io.Decoder;
 
 /**
@@ -68,8 +71,11 @@ public class AvroStructConsumer extends BaseAvroConsumer<StructVector> {
 
   void ensureInnerVectorCapacity(long targetCapacity) {
     for (FieldVector v : vector.getChildrenFromFields()) {
-      while (v.getValueCapacity() < targetCapacity) {
-        v.reAlloc();
+      if (!(v instanceof RepeatedValueVector
+              || v instanceof AbstractContainerVector)) {
+        while (v.getValueCapacity() < targetCapacity) {
+          v.reAlloc();
+        }
       }
     }
   }

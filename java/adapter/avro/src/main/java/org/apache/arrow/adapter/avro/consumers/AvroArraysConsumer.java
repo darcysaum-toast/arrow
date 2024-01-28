@@ -19,7 +19,12 @@ package org.apache.arrow.adapter.avro.consumers;
 
 import java.io.IOException;
 
+import org.apache.arrow.vector.FieldVector;
+import org.apache.arrow.vector.complex.AbstractContainerVector;
 import org.apache.arrow.vector.complex.ListVector;
+import org.apache.arrow.vector.complex.RepeatedValueVector;
+import org.apache.arrow.vector.types.Types;
+import org.apache.arrow.vector.types.pojo.ArrowType;
 import org.apache.avro.io.Decoder;
 
 /**
@@ -67,8 +72,12 @@ public class AvroArraysConsumer extends BaseAvroConsumer<ListVector> {
   }
 
   void ensureInnerVectorCapacity(long targetCapacity) {
-    while (vector.getDataVector().getValueCapacity() < targetCapacity) {
-      vector.getDataVector().reAlloc();
+    FieldVector elementVec = vector.getDataVector();
+    if (!(elementVec instanceof RepeatedValueVector
+            || elementVec instanceof AbstractContainerVector)) {
+      while (vector.getDataVector().getValueCapacity() < targetCapacity) {
+        vector.getDataVector().reAlloc();
+      }
     }
   }
 }

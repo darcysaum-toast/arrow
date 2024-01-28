@@ -474,4 +474,38 @@ public class AvroToArrowTest extends AvroTestBase {
     checkPrimitiveResult(expected, vector);
   }
 
+  @Test
+  public void testNestedUnion() throws Exception {
+    Schema schema = getSchema("test_nested_union.avsc");
+    Schema childSchema = schema
+            .getField("f0")
+            .schema();
+    Schema arrayElementSchema = childSchema.getField("fUnionInArrayOfRecords")
+            .schema()
+            .getElementType();
+
+    ArrayList<GenericRecord> data = new ArrayList<>();
+    GenericRecord parent = new GenericData.Record(schema);
+    GenericRecord child = new GenericData.Record(childSchema);
+    data.add(parent);
+
+    List<Integer> ints = new ArrayList<>();
+    ints.add(5);
+    ints.add(null);
+    ints.add(25);
+
+    List<GenericRecord> elementRecs = new ArrayList<>();
+    GenericRecord nestedElement = new GenericData.Record(arrayElementSchema);
+    nestedElement.put("f1", 55);
+    elementRecs.add(nestedElement);
+
+    child.put("fUnionInRecord", null);
+    child.put("fUnionInArray", ints);
+    child.put("fUnionInArrayOfRecords", elementRecs);
+    parent.put("f0", child);
+
+    VectorSchemaRoot root = writeAndRead(schema, data);
+    System.out.println(root.contentToTSVString());
+  }
+
 }
